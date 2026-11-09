@@ -9,7 +9,9 @@
 html,body{margin:0;height:100%;background:var(--bg);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg)}
 #map{position:absolute;inset:0}
 .panel{position:absolute;z-index:1000;top:12px;left:12px;max-width:340px;background:var(--card);backdrop-filter:blur(8px);border-radius:14px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
-.panel h1{font-size:17px;margin:0 0 4px}
+.panel h1{font-size:17px;margin:0 0 4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+#tog{background:none;border:1px solid #334155;color:var(--fg);border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:15px}
+.panel.min>*:not(h1){display:none}
 .panel .sub{color:var(--mut);font-size:12.5px;margin-bottom:10px}
 .stats{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}
 .stats b{color:var(--mut);font-weight:500}
@@ -26,7 +28,7 @@ details summary{cursor:pointer;font-size:12.5px;color:var(--acc);margin-top:8px}
 </style></head><body>
 <div id="map"></div>
 <div class="panel">
-<h1>Telegram location breadcrumbs</h1>
+<h1>Telegram location breadcrumbs <button id="tog" aria-label="Collapse panel">–</button></h1>
 <div class="sub">Source: Telegram live-location tracking (simplified samples)</div>
 <div class="stats" id="stats"></div>
 <div class="btns" id="btns"></div>
@@ -48,8 +50,8 @@ segs.push(cur);
 const t0=P[0].ms,t1=P[P.length-1].ms;
 const stops=[[99,102,241],[6,182,212],[34,197,94],[234,179,8],[249,115,22],[239,68,68]];
 function col(ms){let f=(ms-t0)/(t1-t0||1)*(stops.length-1);let i=Math.min(Math.floor(f),stops.length-2),r=f-i;const c=stops[i].map((v,k)=>Math.round(v+(stops[i+1][k]-v)*r));return `rgb(${c})`}
-const map=L.map('map',{zoomControl:true,worldCopyJump:true});
-L.tileLayer('https://{s}.basemap.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
+const map=L.map('map',{zoomControl:false,worldCopyJump:true,zoomSnap:0.25});L.control.zoom({position:'topright'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
 segs.forEach(s=>{for(let i=1;i<s.length;i++){L.polyline([[s[i-1].lat,s[i-1].lon],[s[i].lat,s[i].lon]],{color:col(s[i].ms),weight:4,opacity:.9,lineCap:'round'}).addTo(map)}});
 P.forEach((p,i)=>{const first=i===0,last=i===P.length-1;
  const m=L.circleMarker([p.lat,p.lon],{radius:first||last?9:4.5,color:'#fff',weight:first||last?3:1.2,fillColor:first?'#22c55e':last?'#ef4444':col(p.ms),fillOpacity:1}).addTo(map);
@@ -59,9 +61,9 @@ P.forEach((p,i)=>{const first=i===0,last=i===P.length-1;
 });
 const all=L.latLngBounds(P.map(p=>[p.lat,p.lon]));
 const S=P.filter(p=>p.lat<20),N=P.filter(p=>p.lat>=20);
-const pad={padding:[30,30]};
-function fit(b){map.fitBounds(b,pad)}
-fit(all);
+function pad(){const el=document.querySelector('.panel');const r=el.getBoundingClientRect();const mob=innerWidth<=600;return mob?{paddingTopLeft:[24,24],paddingBottomRight:[24,r.height+30]}:{paddingTopLeft:[r.width+40,24],paddingBottomRight:[40,24]}}
+function fit(b){map.fitBounds(b,Object.assign({maxZoom:16},pad()))}
+document.getElementById('tog').onclick=()=>{const p=document.querySelector('.panel');p.classList.toggle('min');document.getElementById('tog').textContent=p.classList.contains('min')?'+':'–'};
 const btns=document.getElementById('btns');
 function btn(label,fn){const b=document.createElement('button');b.textContent=label;b.onclick=fn;btns.appendChild(b)}
 btn('All points',()=>fit(all));
@@ -69,4 +71,5 @@ if(S.length&&N.length){btn(`Costa Rica (${S.length})`,()=>fit(L.latLngBounds(S.m
 btn('Latest point',()=>map.setView([P[P.length-1].lat,P[P.length-1].lon],15));
 document.getElementById('stats').innerHTML=`<b>From</b><span>${pt(P[0].t)}</span><b>To</b><span>${pt(P[P.length-1].t)}</span><b>Points</b><span>${P.length}</span><b>Segments</b><span>${segs.length} (split at gaps &gt;10 min)</span>`;
 document.getElementById('l0').textContent=fmtS.format(new Date(t0));document.getElementById('l1').textContent=fmtS.format(new Date(t1));
+fit(all);
 </script></body></html>
