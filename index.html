@@ -72,4 +72,5 @@ btn('Latest point',()=>map.setView([P[P.length-1].lat,P[P.length-1].lon],15));
 document.getElementById('stats').innerHTML=`<b>From</b><span>${pt(P[0].t)}</span><b>To</b><span>${pt(P[P.length-1].t)}</span><b>Points</b><span>${P.length}</span><b>Segments</b><span>${segs.length} (split at gaps &gt;10 min)</span>`;
 document.getElementById('l0').textContent=fmtS.format(new Date(t0));document.getElementById('l1').textContent=fmtS.format(new Date(t1));
 fit(all);
+addEventListener('load',()=>{map.invalidateSize();fit(all)});
 </script></body></html>
